@@ -46,22 +46,46 @@ def get_job_title_score(job_title, resume_title):
         logger.info('Job title score: 0')
         return 0
     
-def get_technical_skills_score(job_skills, resume_skills):
+def get_job_title_score_bert(job_title, resume_title):
+    '''
+    Calculate the score of job title matching using BERT.
+    '''
+    logger.info('Start to calculate job title score using BERT.')
+    logger.info('Job title: %s' % job_title)
+    logger.info('Resume title: %s' % resume_title)
+    if job_title == resume_title:
+        logger.info('Job title score: 1')
+    # else:
+    # TODO: use NLP techniques to calculate the similarity score
+    return 0
+
+    
+
+def get_technical_skills_score( must_have_skills, job_skills, resume_skills):
     '''
     Calculate the score of technical skills matching.
     '''
     logger.info('Start to calculate technical skills score.')
     logger.info('Job skills: %s' % job_skills)
     logger.info('Resume skills: %s' % resume_skills)
-    job_skills = job_skills.split(',')
-    resume_skills = resume_skills.split(',')
+
+    # job_skills = job_skills.split(',')
+    # resume_skills = resume_skills.split(',')
     total_skills = len(job_skills)
     matched_skills = 0
+    has_must_skills = False
+    # TODO: Check if resume_skills is in must_have_skills
+    for skill in resume_skills:
+        if skill in must_have_skills:
+            has_must_skills = True
+
     for skill in resume_skills:
         if skill in job_skills:
             matched_skills += 1
+    logger.info('Has must have skills: %s' % has_must_skills)        
     logger.info('Technical skills score: %s/%s' % (matched_skills, total_skills))
-    return matched_skills / total_skills
+
+    return matched_skills / total_skills if has_must_skills else 0
 
 def get_matching_score(job_title, job_skills, resume_title, resume_skills, a=0.5, b=0.5):
     '''
