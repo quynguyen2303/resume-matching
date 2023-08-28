@@ -12,13 +12,15 @@ But, need to consider the weight or must-have skills in job description, if not 
 ```
 score = a * job_title_score + b * technical_skills_score
 ```
+
 '''
 
-import os
-import re
 import sys
-import json
 import logging
+
+from transformers import BertTokenizer, BertModel
+import torch
+from scipy.spatial.distance import cosine
 
 def get_logger():
     logger = logging.getLogger('core_matching')
@@ -32,19 +34,22 @@ def get_logger():
 
 logger = get_logger()
 
-def get_job_title_score(job_title, resume_title):
-    '''
-    Calculate the score of job title matching.
-    '''
-    logger.info('Start to calculate job title score.')
-    logger.info('Job title: %s' % job_title)
-    logger.info('Resume title: %s' % resume_title)
-    if job_title == resume_title:
-        logger.info('Job title score: 1')
-        return 1
-    else:
-        logger.info('Job title score: 0')
-        return 0
+# Load pre-trained BERT model and tokenizer
+model_name = "bert-base-uncased"
+model = BertModel.from_pretrained(model_name)
+tokenizer = BertTokenizer.from_pretrained(model_name)
+
+def get_bert_embedding(sentence):
+    tokens = tokenizer(sentence, return_tensors="pt", truncation=True, padding=True, max_length=128)
+    with torch.no_grad():
+        embeddings = model(**tokens).last_hidden_state.mean(dim=1)[0].numpy()
+    return embeddings
+
+def compute_similarity(sentence1, sentence2):
+    embed1 = get_bert_embedding(sentence1)
+    embed2 = get_bert_embedding(sentence2)
+    similarity = 1 - cosine(embed1, embed2)  # Using cosine similarity
+    return similarity
     
 def get_job_title_score_bert(job_title, resume_title):
     '''
@@ -53,13 +58,9 @@ def get_job_title_score_bert(job_title, resume_title):
     logger.info('Start to calculate job title score using BERT.')
     logger.info('Job title: %s' % job_title)
     logger.info('Resume title: %s' % resume_title)
-    if job_title == resume_title:
-        logger.info('Job title score: 1')
-    # else:
-    # TODO: use NLP techniques to calculate the similarity score
-    return 0
-
-    
+    score = compute_similarity(job_title, resume_title)
+    logger.info('Job title score: %s' % score)
+    return score
 
 def get_technical_skills_score( must_have_skills, job_skills, resume_skills):
     '''
@@ -92,7 +93,7 @@ def get_matching_score(job_title, job_skills, resume_title, resume_skills, a=0.5
     Calculate the matching score.
     '''
     logger.info('Start to calculate matching score.')
-    job_title_score = get_job_title_score(job_title, resume_title)
+    job_title_score = get_job_title_score_bert(job_title, resume_title)
     technical_skills_score = get_technical_skills_score(job_skills, resume_skills)
     score = a * job_title_score + b * technical_skills_score
     logger.info('Matching score: %s' % score)
@@ -113,5 +114,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
